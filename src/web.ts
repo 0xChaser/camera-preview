@@ -7,6 +7,7 @@ import type {
   CameraPreviewFlashMode,
   CameraSampleOptions,
   CameraOpacityOptions,
+  CameraPreviewShapeOptions,
 } from './definitions';
 
 export class CameraPreviewWeb extends WebPlugin implements CameraPreviewPlugin {
@@ -176,6 +177,10 @@ export class CameraPreviewWeb extends WebPlugin implements CameraPreviewPlugin {
   }
 
   async isCameraStarted(): Promise<{ value: boolean }> {
+    throw this.unimplemented('Not implemented on web.');
+  }
+
+  async addShape(_options: CameraPreviewShapeOptions): Promise<void> {
     throw this.unimplemented('Not implemented on web.');
   }
 }

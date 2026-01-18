@@ -250,6 +250,34 @@ public class CameraPreview extends Plugin implements CameraActivity.CameraPrevie
     }
 
     @PluginMethod
+    public void addShape(PluginCall call) {
+        if (this.hasCamera(call) == false) {
+            call.reject("Camera is not running");
+            return;
+        }
+
+        String type = call.getString("type", "square");
+        String colorString = call.getString("color", "#FF0000");
+        int color;
+        try {
+            color = Color.parseColor(colorString);
+        } catch (IllegalArgumentException e) {
+            color = Color.RED;
+        }
+
+        final String finalType = type;
+        final int finalColor = color;
+
+        bridge.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                fragment.addShape(finalType, finalColor);
+                call.resolve();
+            }
+        });
+    }
+
+    @PluginMethod
     public void isCameraStarted(PluginCall call) {
         boolean isCameraStarted = hasCamera(call);
         JSObject ret = new JSObject();

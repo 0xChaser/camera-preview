@@ -67,6 +67,7 @@ public class CameraActivity extends Fragment {
     private static final String TAG = "CameraActivity";
     public FrameLayout mainLayout;
     public FrameLayout frameContainerLayout;
+    public DragAndDropView dragAndDropView;
 
     private Preview mPreview;
     private boolean canTakePicture = true;
@@ -148,6 +149,14 @@ public class CameraActivity extends Fragment {
                 new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)
             );
             mainLayout.addView(mPreview);
+            
+            // Add DragAndDrop overlay for widgets
+            dragAndDropView = new DragAndDropView(getActivity());
+            dragAndDropView.setLayoutParams(
+                new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            );
+            mainLayout.addView(dragAndDropView);
+            
             mainLayout.setEnabled(false);
 
             if (enableZoom) {
@@ -569,7 +578,9 @@ public class CameraActivity extends Fragment {
             Log.d(TAG, "CameraPreview jpegPictureCallback");
 
             try {
-                if (!disableExifHeaderStripping) {
+                boolean hasOverlay = CameraActivity.this.dragAndDropView != null;
+
+                if (!disableExifHeaderStripping || hasOverlay) {
                     Matrix matrix = new Matrix();
                     if (cameraCurrentlyLocked == Camera.CameraInfo.CAMERA_FACING_FRONT) {
                         matrix.preScale(1.0f, -1.0f);
@@ -583,10 +594,24 @@ public class CameraActivity extends Fragment {
                         matrix.preRotate(rotationInDegrees);
                     }
 
-                    // Check if matrix has changed. In that case, apply matrix and override data
-                    if (!matrix.isIdentity()) {
+                    if (!matrix.isIdentity() || hasOverlay) {
                         Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                        bitmap = applyMatrix(bitmap, matrix);
+                        
+                        if (!matrix.isIdentity()) {
+                             bitmap = applyMatrix(bitmap, matrix);
+                        }
+                        
+                        if (hasOverlay) {
+                             Bitmap mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+                             Canvas canvas = new Canvas(mutableBitmap);
+                             
+                             float scaleX = (float) mutableBitmap.getWidth() / CameraActivity.this.dragAndDropView.getWidth();
+                             float scaleY = (float) mutableBitmap.getHeight() / CameraActivity.this.dragAndDropView.getHeight();
+                             canvas.scale(scaleX, scaleY);
+                             
+                             CameraActivity.this.dragAndDropView.drawOnCanvas(canvas);
+                             bitmap = mutableBitmap;
+                        }
 
                         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                         bitmap.compress(CompressFormat.JPEG, currentQuality, outputStream);
@@ -699,6 +724,12 @@ public class CameraActivity extends Fragment {
         }
         Log.d(TAG, "CameraPreview optimalPictureSize " + size.width + 'x' + size.height);
         return size;
+    }
+
+    public void addShape(String type, int color) {
+        if (dragAndDropView != null) {
+            dragAndDropView.addShape(type, color);
+        }
     }
 
     static byte[] rotateNV21(final byte[] yuv, final int width, final int height, final int rotation) {

@@ -20,10 +20,12 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setFlashMode", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startRecordVideo", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "stopRecordVideo", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "isCameraStarted", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "isCameraStarted", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "addShape", returnType: CAPPluginReturnPromise)
     ]
 
     var previewView: UIView!
+    var shapesOverlay: ShapesOverlayView!
     var cameraPosition = String()
     let cameraController = CameraController()
     // swiftlint:disable identifier_name
@@ -114,6 +116,11 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
 
                         let adjustedHeight = self.paddingBottom != nil ? height - self.paddingBottom! : height
                         self.previewView = UIView(frame: CGRect(x: self.x ?? 0, y: self.y ?? 0, width: width, height: adjustedHeight))
+                        
+                        self.shapesOverlay = ShapesOverlayView(frame: self.previewView.bounds)
+                        self.shapesOverlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                        self.previewView.addSubview(self.shapesOverlay)
+                        
                         self.webView?.isOpaque = false
                         self.webView?.backgroundColor = UIColor.clear
                         self.webView?.scrollView.backgroundColor = UIColor.clear
@@ -187,7 +194,7 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
 
             self.cameraController.captureImage { (image, error) in
 
-                guard let image = image else {
+                guard var image = image else {
                     print(error ?? "Image capture error")
                     guard let error = error else {
                         call.reject("Image capture error")
@@ -196,6 +203,11 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
                     call.reject(error.localizedDescription)
                     return
                 }
+                // If overlay exist, merge with the image                
+                if let overlay = self.shapesOverlay {
+                     image = self.mergeOverlay(image: image, overlay: overlay)
+                }
+                
                 let imageData: Data?
                 if self.cameraController.currentCameraPosition == .front {
                     let flippedImage = image.withHorizontallyFlippedOrientation()
@@ -217,6 +229,24 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
                     }
                 }
             }
+        }
+    }
+    
+    func mergeOverlay(image: UIImage, overlay: UIView) -> UIImage {
+        let size = image.size
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1.0
+        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        
+        return renderer.image { context in
+            image.draw(at: .zero)
+            
+            let scaleX = size.width / overlay.bounds.width
+            let scaleY = size.height / overlay.bounds.height
+            
+            context.cgContext.scaleBy(x: scaleX, y: scaleY)
+            
+            overlay.layer.render(in: context.cgContext)
         }
     }
 
@@ -333,6 +363,43 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
                 call.resolve(["value": false])
             }
         }
+    }
+
+    @objc func addShape(_ call: CAPPluginCall) {
+        let type = call.getString("type") ?? "square"
+        let colorString = call.getString("color") ?? "#FF0000"
+        let color = self.color(from: colorString)
+        
+        DispatchQueue.main.async {
+            if self.shapesOverlay != nil {
+                self.shapesOverlay.addShape(type: type, color: color)
+                call.resolve()
+            } else {
+                call.reject("Camera not running")
+            }
+        }
+    }
+    
+    func color(from hex: String) -> UIColor {
+        var cString:String = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+
+        if (cString.hasPrefix("#")) {
+            cString.remove(at: cString.startIndex)
+        }
+
+        if ((cString.count) != 6) {
+            return UIColor.gray
+        }
+
+        var rgbValue:UInt64 = 0
+        Scanner(string: cString).scanHexInt64(&rgbValue)
+
+        return UIColor(
+            red: CGFloat((rgbValue & 0xFF0000) >> 16) / 255.0,
+            green: CGFloat((rgbValue & 0x00FF00) >> 8) / 255.0,
+            blue: CGFloat(rgbValue & 0x0000FF) / 255.0,
+            alpha: CGFloat(1.0)
+        )
     }
 
 }

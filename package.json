@@ -1,5 +1,5 @@
 {
-  "name": "@capacitor-community/camera-preview",
+  "name": "0xchaser-camera-preview",
   "version": "7.0.2",
   "description": "Camera preview",
   "main": "dist/plugin.cjs.js",
@@ -47,7 +47,7 @@
     "typescript": "^5.8.3"
   },
   "peerDependencies": {
-    "@capacitor/core": ">=7.0.0"
+    "@capacitor/core": ">=8.0.0"
   },
   "husky": {
     "hooks": {
@@ -86,10 +86,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/capacitor-community/camera-preview.git"
+    "url": "https://github.com/0xChaser/camera-preview.git"
   },
   "bugs": {
-    "url": "https://github.com/capacitor-community/camera-preview/issues"
+    "url": "https://github.com/0xChaser/camera-preview/issues"
+
   },
   "engines": {
     "node": ">=18.0.0",

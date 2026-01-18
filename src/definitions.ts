@@ -58,6 +58,11 @@ export interface CameraOpacityOptions {
   opacity?: number;
 }
 
+export interface CameraPreviewShapeOptions {
+  type?: string;
+  color?: string;
+}
+
 export interface CameraPreviewPlugin {
   start(options: CameraPreviewOptions): Promise<void>;
   startRecordVideo(options: CameraPreviewOptions): Promise<void>;
@@ -72,4 +77,5 @@ export interface CameraPreviewPlugin {
   flip(): Promise<void>;
   setOpacity(options: CameraOpacityOptions): Promise<void>;
   isCameraStarted(): Promise<{ value: boolean }>;
+  addShape(options: CameraPreviewShapeOptions): Promise<void>;
 }
